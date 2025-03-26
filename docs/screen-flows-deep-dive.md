@@ -53,9 +53,9 @@ This payload contains an Organization ID and, presumably, directions on how to d
 ##### The Remaining Serialized Flow State
 
 The remaining string seems to be an encrypted string representing the flow's state. Disclaimer: I can't find any Salesforce documentation to officially support this, but the following three points lead me to believe that it is:
-    1. The remaining string does not decode from base 64
-    2. Its entropy is higher than the unencrypted header, meaning it's apparently more random
-    3. There is a `flowencryptionkey` in the header.
+1. The remaining string does not decode from base 64
+2. Its entropy is higher than the unencrypted header, meaning it's apparently more random
+3. There is a `flowencryptionkey` in the header.
 
 ## Security Implications
 
@@ -72,10 +72,10 @@ Given that the state of the flow is encrypted with each request, a malicious use
 However, once a malicious user has a serializedState string that encodes a valid flow state which they intend to abuse, they can reuse that string for further subsequent requests, a kind of replay attack.
 
 For example, imagine a flow with two screens:
-    1. Recaptcha Test: This screen displays presents a recaptcha challenge to confirm that the running user is not a bot. When the user presses `Next`, they result is sent to the server to safely validate it. A variable `user_is_human` is set to `true`. Then they are returned the next screen.
-    2. Sensitive Form: This screen presents a form which allows users to create a record, perhaps sending an automated email to the provided address.
+1. Recaptcha Test: This screen presents a recaptcha challenge to confirm that the running user is not a bot. When the user presses `Next`, the result is sent to the server to safely validate it. A variable `user_is_human` is set to `true`. Then they are returned the next screen.
+2. Sensitive Form: This screen presents a form which allows users to create a record, perhaps sending an automated email to the provided address.
 
-If a malicious user wants to make a request to the protected form on Screen 2 via an automated bot script, they could simply complete the form once as a human. After completing the Recaptcha challenge, they will receive a serializedState string whose `user_is_human` is set to `true`. They then include that serializedState in their bot requests without ever needing the bot to complete the challenge.
+If a malicious user wants to make a request to the protected form on Screen 2 via an automated bot script, they could simply complete the form once as a human. After completing the Recaptcha challenge, they will receive a serializedState string whose `user_is_human` is set to `true`. They need not even know that this variable exists; the malicious user only knows that this state is valid in order to advance to the subsequent screen. They then include the forged serializedState in their bot requests without ever needing the bot to complete the challenge.
 
 ## The Resolution
 In order to protect a screen flow on a public site, the Recaptcha test would need to be validated server-side immediately before executing the protected action (ex. inserting records or sending emails) without giving the user an opportunity to forge the serializedState screen. This may mean, for example, ensuring the the Recaptcha test is on the same screen as the input form and validating it first before carrying out any other actions. If a flow has multiple protected actions on different screens, this would mean having to perform multiple independent Recaptcha tests, since any subsequent ones could be done with a forged state.
